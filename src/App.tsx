@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { items } from './mocks/alertHistory.ts';
 import { Notification } from './types/Notification.ts';
+import Vehicle3D from './components/Vehicle3D.tsx';
 type VehicleState = 'driving' | 'parked';
 
 function App() {
@@ -74,7 +75,7 @@ function App() {
         </div>
       </header>
       {/* 주행중 정보 */}
-      <section className='relative rounded-2xl border p-4 border-h-sand bg-h-light-blue'>
+      <section className='relative rounded-2xl border p-4 border-h-sand'>
         <div className='flex items-center justify-between gap-50'>
           <div
             className='absolute left-3 top-3 flex items-center gap-2'
@@ -109,11 +110,7 @@ function App() {
         </div>
 
         <div className='flex items-center justify-center py-6'>
-          <img
-            src='/alcha_logo.svg'
-            alt='vehicle'
-            className='w-4/5 max-w-[380px]'
-          />
+          <Vehicle3D mode={vehicle.state} speed={vehicle.speed} />
         </div>
 
         {vehicle.wheel && (

@@ -24,7 +24,7 @@ export const vehicleData: VehicleData = {
   vehicle_id: '1',
   vehicle_type: 'Tesla',
   ignition: true,
-  speed: 100,
+  speed: 200,
   fuel_percent: 50,
   is_ev: false,
   wheel_speeds: {
