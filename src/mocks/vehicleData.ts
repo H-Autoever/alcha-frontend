@@ -1,5 +1,11 @@
+interface Gear {
+    gear: 'P' | 'R' | 'N' | 'D',
+    gear_number?: 1 | 2 | 3 | 4 | 5 | 6,
+}
+
 interface VehicleData {
     vehicle_id: string,
+    vehicle_type: string,
     ignition: boolean,
     speed: number,
     fuel_percent: number,
@@ -10,10 +16,13 @@ interface VehicleData {
         RL: number,
         RR: number,
     },
+    gear: Gear
+    parking_brake: boolean,
 }
 
 export const vehicleData: VehicleData = {
     vehicle_id: '1',
+    vehicle_type: 'Tesla',
     ignition: true,
     speed: 100,
     fuel_percent: 50,
@@ -24,4 +33,6 @@ export const vehicleData: VehicleData = {
         RL: 100,
         RR: 100,
     },
+    gear: { gear: 'P' },
+    parking_brake: false,
 }

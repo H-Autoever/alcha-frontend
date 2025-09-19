@@ -1,42 +1,47 @@
 import { useMemo } from 'react'
-
-type NotificationItem = {
-  id: string
-  createdAt: string
-  title: string
-  message: string
-  level: 'info' | 'warning' | 'critical'
-}
+import { useNavigate } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
+import { items as alertItems } from '../mocks/alertHistory'
+import { Notification } from '../types/Notification'
 
 function NotificationsPage() {
-  const items = useMemo<NotificationItem[]>(() => [
-    { id: '1', createdAt: new Date().toISOString(), title: '엔진 점검 필요', message: '엔진 온도가 일시적으로 높았습니다.', level: 'warning' },
-    { id: '2', createdAt: new Date(Date.now() - 3600_000).toISOString(), title: '타이어 압력 낮음', message: 'FL 타이어 압력이 기준치보다 낮습니다.', level: 'critical' },
-  ], [])
+  const navigate = useNavigate()
+
+  const items = useMemo<Notification[]>(() => alertItems, [])
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '16px' }}>
-      <h2 style={{ margin: '8px 0' }}>전체 알림</h2>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {items.map((n) => (
-          <li key={n.id} style={{
-            display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12,
-            padding: 12, borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong>{n.title}</strong>
-              <span style={{
-                fontSize: 12,
-                color: '#64748b',
-                background: n.level === 'critical' ? '#fee2e2' : n.level === 'warning' ? '#fef3c7' : '#e5e7eb',
-                borderRadius: 999, padding: '2px 8px'
-              }}>{n.level}</span>
-            </div>
-            <div style={{ fontSize: 14 }}>{n.message}</div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>{new Date(n.createdAt).toLocaleString()}</div>
-          </li>
-        ))}
-      </ul>
+    <div className='max-w-xl mx-auto'>
+      {/* Header */}
+      <header className='fixed inset-x-0 top-0 bg-h-blue shadow-sm flex items-center px-2 py-4'>
+        <button
+          className='text-h-white hover:bg-white/10 rounded-lg px-2 py-1'
+          onClick={() => navigate('/')}
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <h2 className='flex-1 pr-9 text-lg text-h-white font-bold text-center'>전체 알림</h2>
+      </header>
+
+      {/* Content */}
+      <main className='mx-auto max-w-xl px-4 pt-20 pb-10'>
+        <ul className='space-y-3'>
+          {items.map((n) => (
+            <li key={n.id} className='flex flex-col gap-1 p-3 rounded-xl border border-h-sand bg-h-white shadow-sm'>
+              <div className='flex justify-between items-center'>
+                <strong className='text-gray-900'>{n.title}</strong>
+                <span className={`text-xs rounded-full px-2 py-0.5 ${n.level === 'critical' ? 'bg-red-100 text-red-800' :
+                  n.level === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                  {n.level}
+                </span>
+              </div>
+              <div className='text-sm text-gray-700'>{n.message}</div>
+              <div className='text-xs text-h-grey'>{new Date(n.createdAt).toLocaleString()}</div>
+            </li>
+          ))}
+        </ul>
+      </main>
     </div>
   )
 }
