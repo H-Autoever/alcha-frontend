@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { items as alertItems } from '../mocks/alertHistory';
-import { Notification } from '../types/Notification';
+import { AlertData } from '../hooks/useSSEConntect';
+import useSSEConntect from '../hooks/useSSEConntect';
 
 function NotificationsPage() {
   const navigate = useNavigate();
 
-  const items = useMemo<Notification[]>(() => alertItems, []);
+  const { alertData } = useSSEConntect('1', true);
+  const items = useMemo<AlertData[] | null>(() => alertData, [alertData]);
 
   return (
     <div className='max-w-xl mx-auto'>
@@ -27,7 +28,7 @@ function NotificationsPage() {
       {/* Content */}
       <main className='mx-auto max-w-xl px-4 pt-20 pb-10'>
         <ul className='space-y-3'>
-          {items.map(n => (
+          {items?.map(n => (
             <li
               key={n.id}
               className='flex flex-col gap-1 p-3 rounded-xl border border-h-sand bg-h-white shadow-sm'
@@ -36,14 +37,14 @@ function NotificationsPage() {
                 <strong className='text-gray-900'>{n.title}</strong>
                 <span
                   className={`text-xs rounded-full px-2 py-0.5 ${
-                    n.level === 'critical'
+                    n.severity === 'critical'
                       ? 'bg-red-100 text-red-800'
-                      : n.level === 'warning'
+                      : n.severity === 'warning'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  {n.level}
+                  {n.severity}
                 </span>
               </div>
               <div className='text-sm text-gray-700'>{n.message}</div>

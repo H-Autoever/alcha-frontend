@@ -10,10 +10,7 @@ function App() {
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<any>(null);
 
-  const { periodicData, realtimeData, alertData, status } = useSSEData(
-    '1',
-    true
-  );
+  const { periodicData, realtimeData, alertData } = useSSEData('1', true);
 
   useEffect(() => {
     if (periodicData && realtimeData) {
@@ -146,10 +143,10 @@ function App() {
         </div>
         {vehicle.tpms && (
           <div className='flex flex-col ap-2 text-xs text-h-grey'>
-            <div>FL: {vehicle.tpms.FL} kPa</div>
-            <div>FR: {vehicle.tpms.FR} kPa</div>
-            <div>RL: {vehicle.tpms.RL} kPa</div>
-            <div>RR: {vehicle.tpms.RR} kPa</div>
+            <div>FL: {vehicle.tpms.FL.toFixed(2)} kPa</div>
+            <div>FR: {vehicle.tpms.FR.toFixed(2)} kPa</div>
+            <div>RL: {vehicle.tpms.RL.toFixed(2)} kPa</div>
+            <div>RR: {vehicle.tpms.RR.toFixed(2)} kPa</div>
           </div>
         )}
       </section>
@@ -167,7 +164,7 @@ function App() {
           [
             '스로틀',
             vehicle.state === 'driving'
-              ? `${vehicle.throttle_position}%`
+              ? `${vehicle.throttle_position.toFixed(2)}%`
               : '0%',
           ],
           [
@@ -178,16 +175,19 @@ function App() {
           ],
           [
             '엔진 온도',
-            vehicle.state === 'driving' ? `${vehicle.engine_temp}℃` : '—',
+            vehicle.state === 'driving'
+              ? `${vehicle.engine_temp.toFixed(2)}℃`
+              : '—',
           ],
           [
             '냉각수 온도',
-            vehicle.state === 'driving' ? `${vehicle.coolant_temp}℃` : '—',
+            vehicle.state === 'driving'
+              ? `${vehicle.coolant_temp.toFixed(2)}℃`
+              : '—',
           ],
-          ['실내 온도', `${vehicle.temperature_cabin}℃`],
-          ['실외 온도', `${vehicle.temperature_ambient}℃`],
+          ['실내 온도', `${vehicle.temperature_cabin.toFixed(2)}℃`],
+          ['실외 온도', `${vehicle.temperature_ambient.toFixed(2)}℃`],
           ['배터리 전압', `${vehicle.battery_voltage}V`],
-          ['타이어 압력', `F ${vehicle.tpms.FL} / R ${vehicle.tpms.RL} kPa`],
           ['연료 잔량', `${vehicle.fuel_level}%`],
         ].map(([k, v]) => (
           <div
