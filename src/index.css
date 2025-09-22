@@ -1,7 +1,51 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+:root {
+  /* Hyundai CI palette (source: https://www.hyundai.com/kr/ko/info/ci/ci-color) */
+
+  /* Hyundai Blue PMS 654C */
+  --color-h-blue: #002c5f;
+  /* Hyundai Sand */
+  --color-h-sand: #e4dcd3;
+  /* Hyundai Light Sand */
+  --color-h-light-sand: #f6f3f2;
+  /* Hyundai Gold PMS 876C */
+  --color-h-gold: #a36b4f;
+  /* White */
+  --color-h-white: #ffffff;
+  /* Black */
+  --color-h-black: #000000;
+  /* Active Blue PMS 312C */
+  --color-h-active-blue: #00aad2;
+  /* Sky Blue PMS 277C */
+  --color-h-light-blue: #f2f9ff;
+  /* Active Red PMS 2347C */
+  --color-h-red: #e63312;
+  /* Green */
+  --color-h-green: green;
+  /* Grey */
+  --color-h-grey: #565555;
+}
+
+
+@theme inline {
+  /* Hyundai CI color aliases for Tailwind utility classes */
+  --color-h-blue: var(--color-h-blue);
+  --color-h-sand: var(--color-h-sand);
+  --color-h-light-sand: var(--color-h-light-sand);
+  --color-h-gold: var(--color-h-gold);
+  --color-h-white: var(--color-h-white);
+  --color-h-black: var(--color-h-black);
+  --color-h-active-blue: var(--color-h-active-blue);
+  --color-h-light-blue: var(--color-h-light-blue);
+  --color-h-red: var(--color-h-red);
+  --color-h-grey: var(--color-h-grey);
+  --color-h-light-grey: var(--color-h-light-grey);
+  --color-h-green: var(--color-h-green)
+}
+
+/* @custom-variant dark (&:is(.dark *));
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -139,7 +183,7 @@ button:focus-visible {
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-ring: var(--sidebar-ring);  
 }
 
 .dark {
@@ -180,7 +224,10 @@ button:focus-visible {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
+
+*/
