@@ -1,7 +1,5 @@
-// useSseData.ts
 import { useState, useEffect } from 'react';
 
-// 데이터 타입 정의
 interface PeriodicData {
   vehicle_id: string;
   location_latitude: number;
@@ -40,7 +38,6 @@ export interface AlertData {
   severity: string;
 }
 
-// 상태 타입 정의
 interface SSEState {
   periodicData: PeriodicData | null;
   realtimeData: RealtimeData | null;
@@ -49,7 +46,7 @@ interface SSEState {
   error: Event | null;
 }
 
-const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
+const useSSEConnect = (vehicleId: string, isMock: boolean = false) => {
   const [state, setState] = useState<SSEState>({
     periodicData: null,
     realtimeData: null,
@@ -59,16 +56,24 @@ const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
   });
 
   useEffect(() => {
-    // 💡 Mocking 모드인 경우
+    // 💡 connectedVehicleID가 변경될 때마다 상태 초기화
+    // 이 초기화는 useEffect의 클린업 함수보다 먼저 실행되므로
+    // App.tsx에서 즉각적으로 null 상태를 감지할 수 있습니다.
+    setState({
+      periodicData: null,
+      realtimeData: null,
+      alertData: null,
+      status: 'connecting',
+      error: null,
+    });
+
     if (isMock) {
       console.log('Mocking 모드로 SSE 데이터 생성 시작');
       setState(prevState => ({ ...prevState, status: 'connected' }));
 
-      // periodic_data (10초 주기)
       const periodicInterval = setInterval(() => {
         const mockData = {
           vehicle_id: vehicleId,
-          // 서울의 위도, 경도 범위(37.4~37.7, 126.7~127.2) 내에서 랜덤 값 생성
           location_latitude: 37.4 + Math.random() * 0.3,
           location_longitude: 126.7 + Math.random() * 0.5,
           location_altitude: 35.2,
@@ -84,7 +89,6 @@ const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
         setState(prevState => ({ ...prevState, periodicData: mockData }));
       }, 10000);
 
-      // realtime_data (1초 주기)
       const realtimeInterval = setInterval(() => {
         const mockData = {
           vehicle_id: vehicleId,
@@ -103,7 +107,6 @@ const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
         setState(prevState => ({ ...prevState, realtimeData: mockData }));
       }, 1000);
 
-      // alert_data (30초 주기)
       const alertInterval = setInterval(() => {
         const mockData = {
           id: Date.now().toString(),
@@ -129,33 +132,52 @@ const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
       };
     }
 
-    // 서버 주소는 실제 환경에 맞게 변경하세요.
     const url = `http://localhost:8080/api/sse/${vehicleId}`;
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
-      console.log('SSE 연결 성공!');
+      console.log('SSE 연결 성공!', vehicleId);
       setState(prevState => ({ ...prevState, status: 'connected' }));
     };
 
     eventSource.addEventListener('periodic_data', event => {
       const data = JSON.parse(event.data) as PeriodicData;
-      setState(prevState => ({ ...prevState, periodicData: data }));
+      console.log('periodic data', data);
+      // 💡 데이터 유효성 검사 추가: 받은 데이터의 ID가 현재 연결 ID와 일치하는지 확인
+      if (data.vehicle_id === vehicleId) {
+        setState(prevState => ({ ...prevState, periodicData: data }));
+      } else {
+        console.log(
+          `무시된 데이터: ID 불일치. 받은 ID: ${data.vehicle_id}, 현재 ID: ${vehicleId}`
+        );
+      }
     });
 
     eventSource.addEventListener('realtime_data', event => {
       const data = JSON.parse(event.data) as RealtimeData;
-      setState(prevState => ({ ...prevState, realtimeData: data }));
+      console.log('realtime data', data);
+      // 💡 데이터 유효성 검사 추가
+      if (data.vehicle_id === vehicleId) {
+        setState(prevState => ({ ...prevState, realtimeData: data }));
+      } else {
+        console.log(
+          `무시된 데이터: ID 불일치. 받은 ID: ${data.vehicle_id}, 현재 ID: ${vehicleId}`
+        );
+      }
     });
 
     eventSource.addEventListener('alert_data', event => {
       const data = JSON.parse(event.data) as AlertData;
-      setState(prevState => {
-        const newAlertData = prevState.alertData
-          ? [data, ...prevState.alertData]
-          : [data];
-        return { ...prevState, alertData: newAlertData.slice(0, 10) };
-      });
+      // 💡 데이터 유효성 검사 추가
+      if (data.id.split('_')[0] === vehicleId) {
+        // 예시: 알림 ID 형식에 따라 수정 필요
+        setState(prevState => {
+          const newAlertData = prevState.alertData
+            ? [data, ...prevState.alertData]
+            : [data];
+          return { ...prevState, alertData: newAlertData.slice(0, 10) };
+        });
+      }
     });
 
     eventSource.onerror = event => {
@@ -167,11 +189,10 @@ const useSSEConntect = (vehicleId: string, isMock: boolean = true) => {
     return () => {
       console.log('SSE 연결 종료');
       eventSource.close();
-      setState(prevState => ({ ...prevState, status: 'closed' }));
     };
-  }, [vehicleId, isMock]);
+  }, [vehicleId, isMock]); // 💡 의존성 배열에 vehicleId 포함
 
   return state;
 };
 
-export default useSSEConntect;
+export default useSSEConnect;
