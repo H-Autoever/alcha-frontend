@@ -12,30 +12,25 @@ function App() {
   const [inputVehicleID, setInputVehicleID] = useState('ABC1234');
   const [connectedVehicleID, setConnectedVehicleID] = useState('ABC1234');
   const [vehicle, setVehicle] = useState<VehicleState | null>(null);
-  const { periodicData, realtimeData, alertData, status } = useSSEConnect(
-    connectedVehicleID,
-    false
-  );
+  const { periodicData, realtimeData, alertData, status } =
+    useSSEConnect(connectedVehicleID);
 
   useEffect(() => {
-    console.log('connectedVehicleID', connectedVehicleID, 'vehicle', vehicle);
-    // ✨ vehicle 상태가 아직 null인 경우
+    // vehicle 상태가  null인 경우
     if (!vehicle && (periodicData || realtimeData)) {
-      const ignitionOn = realtimeData?.engine_status_ignition === 'ON';
-      const gearMode = realtimeData?.gear_position_mode || 'P';
-      const isDrivingGear = gearMode === 'D' || gearMode === 'N';
-      const vehicleState = (
-        ignitionOn && isDrivingGear ? 'driving' : 'parked'
-      ) as 'driving' | 'parked';
-
-      if (realtimeData && connectedVehicleID !== realtimeData.vehicle_id) {
-        setVehicle(null);
-      } else if (
-        periodicData &&
-        connectedVehicleID !== periodicData.vehicle_id
+      // 이전에 요청한 차량 id와와 현재 요청한 차량 id가 다른 경우 남아있는 vehicle 상태 초기화화
+      if (
+        (realtimeData && connectedVehicleID !== realtimeData.vehicle_id) ||
+        (periodicData && connectedVehicleID !== periodicData.vehicle_id)
       ) {
         setVehicle(null);
       } else {
+        const ignitionOn = realtimeData?.engine_status_ignition === 'ON';
+        const gearMode = realtimeData?.gear_position_mode || 'P';
+        const isDrivingGear = gearMode === 'D' || gearMode === 'N';
+        const vehicleState = (
+          ignitionOn && isDrivingGear ? 'driving' : 'parked'
+        ) as 'driving' | 'parked';
         // 💡 둘 중 하나라도 데이터가 들어오면 기본 vehicle 객체 생성
         const initialVehicle = {
           state: vehicleState,
@@ -68,21 +63,14 @@ function App() {
           accelerometer_y: 0,
           accelerometer_z: 0,
         };
-
-        // const isDrivingGear =
-        //   initialVehicle.gear_position_mode === 'D' ||
-        //   initialVehicle.gear_position_mode === 'N';
-        // initialVehicle.state =
-        //   initialVehicle.ignitionOn && isDrivingGear ? 'driving'  : 'parked';
         setVehicle(initialVehicle);
       }
     }
-    // ✨ vehicle 상태가 이미 존재하는 경우
+    // vehicle 상태가 이미 존재하는 경우
     else if (vehicle) {
-      console.log('b', vehicle, realtimeData, periodicData);
       // 💡 새로운 데이터로 필요한 속성만 업데이트
       setVehicle(prevVehicle => {
-        if (!prevVehicle) return null; // 방어 코드
+        if (!prevVehicle) return null;
 
         const updatedVehicle = { ...prevVehicle };
 
@@ -117,7 +105,7 @@ function App() {
           updatedVehicle.ev_battery_current = realtimeData.ev_battery_current;
         }
 
-        // 파생 상태 계산
+        // 주차중/주행중 업데이트
         const isDrivingGear =
           updatedVehicle.gear_position_mode === 'D' ||
           updatedVehicle.gear_position_mode === 'N';
@@ -127,7 +115,7 @@ function App() {
         return updatedVehicle;
       });
     } else {
-      console.log('존재하지 않는 vehicleId 입니다.', connectedVehicleID);
+      console.log('조회할 수 없는 vehicleId 입니다.', connectedVehicleID);
     }
   }, [periodicData, realtimeData, connectedVehicleID]);
 
@@ -144,9 +132,29 @@ function App() {
   return (
     <div className='max-w-xl mx-auto p-10'>
       <header className='mb-3 flex items-center justify-between px-2'>
-        <h1 className='text-xl font-bold text-h-blue'>
+        {/* 테스트 끝나면 vehicle_id 입력 받는 기능 삭제하면서 대신 띄울 차량 식별 데이터 (차종 데이터가 들어온다면 차종) */}
+        {/* <h1 className='text-xl font-bold text-h-blue'>
           {vehicle?.vehicle_id || '차량 ID'}
-        </h1>
+        </h1> */}
+        <div className='flex gap-2 mb-4 items-center'>
+          <label htmlFor='vehicleID' className='text-h-blue font-semibold'>
+            차량 아이디
+          </label>
+          <input
+            id='vehicleID'
+            type='text'
+            value={inputVehicleID}
+            onChange={e => setInputVehicleID(e.target.value)}
+            placeholder='차량 아이디를 입력하세요'
+            className='border-1 p-1 rounded-sm max-w-[40%]'
+          />
+          <button
+            className='bg-h-blue rounded-sm text-h-white p-2'
+            onClick={handleConnect}
+          >
+            연결
+          </button>
+        </div>
         <div className='relative'>
           <button
             aria-label='notifications'
@@ -188,23 +196,6 @@ function App() {
           )}
         </div>
       </header>
-
-      <div className='flex gap-2 mb-4'>
-        <label className='text-h-blue font-semibold'>차량 아이디</label>
-        <input
-          type='text'
-          value={inputVehicleID}
-          onChange={e => setInputVehicleID(e.target.value)}
-          placeholder='차량 아이디를 입력하세요'
-          className='border-1 p-1 rounded-sm'
-        />
-        <button
-          className='bg-h-blue rounded-sm text-h-white p-2'
-          onClick={handleConnect}
-        >
-          연결
-        </button>
-      </div>
 
       {!vehicle ? (
         <div className='text-center text-gray-500'>
