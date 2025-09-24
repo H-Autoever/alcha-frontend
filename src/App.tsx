@@ -1,46 +1,160 @@
 import PWABadge from './PWABadge.tsx';
-import { vehicleData } from './mocks/vehicleData.ts';
 import { Bell } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { items } from './mocks/alertHistory.ts';
-import { Notification } from './types/Notification.ts';
 import Vehicle3D from './components/Vehicle3D.tsx';
-type VehicleState = 'driving' | 'parked';
+import useSSEConnect, { AlertData } from './hooks/useSSEConntect.ts';
+import { VehicleState } from './types/VehicleState.ts';
 
 function App() {
-  // TODO: SSE 데이터로 교체 예정. 현재는 정적 표시
   const [recentOpen, setRecentOpen] = useState(false);
   const navigate = useNavigate();
+  const [inputVehicleID, setInputVehicleID] = useState('ABC1234');
+  const [connectedVehicleID, setConnectedVehicleID] = useState('ABC1234');
+  const [vehicle, setVehicle] = useState<VehicleState | null>(null);
+  const { periodicData, realtimeData, alertData, status } =
+    useSSEConnect(connectedVehicleID);
 
-  const recent = useMemo<Notification[]>(() => items.slice(0, 2), []);
-  const vehicle: {
-    state: VehicleState;
-    vehicle_type: string;
-    speed: number;
-    ignitionOn: boolean;
-    fuelPercent: number;
-    isEV: boolean;
-    wheel: null | { FL: number; FR: number; RL: number; RR: number };
-  } = {
-    state:
-      vehicleData.ignition && vehicleData.gear.gear === 'D'
-        ? 'driving'
-        : 'parked',
-    vehicle_type: vehicleData.vehicle_type,
-    speed: vehicleData.speed,
-    ignitionOn: vehicleData.ignition,
-    fuelPercent: vehicleData.fuel_percent,
-    isEV: vehicleData.is_ev,
-    wheel: null,
+  useEffect(() => {
+    // vehicle 상태가  null인 경우
+    if (!vehicle && (periodicData || realtimeData)) {
+      // 이전에 요청한 차량 id와와 현재 요청한 차량 id가 다른 경우 남아있는 vehicle 상태 초기화화
+      if (
+        (realtimeData && connectedVehicleID !== realtimeData.vehicle_id) ||
+        (periodicData && connectedVehicleID !== periodicData.vehicle_id)
+      ) {
+        setVehicle(null);
+      } else {
+        const ignitionOn = realtimeData?.engine_status_ignition === 'ON';
+        const gearMode = realtimeData?.gear_position_mode || 'P';
+        const isDrivingGear = gearMode === 'D' || gearMode === 'N';
+        const vehicleState = (
+          ignitionOn && isDrivingGear ? 'driving' : 'parked'
+        ) as 'driving' | 'parked';
+        // 💡 둘 중 하나라도 데이터가 들어오면 기본 vehicle 객체 생성
+        const initialVehicle = {
+          state: vehicleState,
+          vehicle_id:
+            periodicData?.vehicle_id || realtimeData?.vehicle_id || 'N/A',
+          vehicle_speed: realtimeData?.vehicle_speed || 0,
+          engine_rpm: realtimeData?.engine_rpm || 0,
+          ignitionOn: realtimeData?.engine_status_ignition === 'ON' || false,
+          gear_position_mode: realtimeData?.gear_position_mode || 'P',
+          fuel_level: periodicData?.fuel_level || 0,
+          isEV: !!realtimeData?.ev_battery_voltage,
+          ev_battery_current: realtimeData?.ev_battery_current || 0,
+          tpms: {
+            FL: periodicData?.tpms_front_left || 0,
+            FR: periodicData?.tpms_front_right || 0,
+            RL: periodicData?.tpms_rear_left || 0,
+            RR: periodicData?.tpms_rear_right || 0,
+          },
+          location_latitude: periodicData?.location_latitude || 0,
+          location_longitude: periodicData?.location_longitude || 0,
+          temperature_cabin: periodicData?.temperature_cabin || 0,
+          temperature_ambient: periodicData?.temperature_ambient || 0,
+          battery_voltage: periodicData?.battery_voltage || 0,
+          throttle_position: realtimeData?.throttle_position || 0,
+          gear_position_current_gear:
+            realtimeData?.gear_position_current_gear || 0,
+          engine_temp: realtimeData?.engine_temp || 0,
+          coolant_temp: realtimeData?.coolant_temp || 0,
+          accelerometer_x: 0,
+          accelerometer_y: 0,
+          accelerometer_z: 0,
+        };
+        setVehicle(initialVehicle);
+      }
+    }
+    // vehicle 상태가 이미 존재하는 경우
+    else if (vehicle) {
+      // 💡 새로운 데이터로 필요한 속성만 업데이트
+      setVehicle(prevVehicle => {
+        if (!prevVehicle) return null;
+
+        const updatedVehicle = { ...prevVehicle };
+
+        if (periodicData) {
+          updatedVehicle.vehicle_id = periodicData.vehicle_id;
+          updatedVehicle.fuel_level = periodicData.fuel_level;
+          updatedVehicle.tpms = {
+            FL: periodicData.tpms_front_left,
+            FR: periodicData.tpms_front_right,
+            RL: periodicData.tpms_rear_left,
+            RR: periodicData.tpms_rear_right,
+          };
+          updatedVehicle.location_latitude = periodicData.location_latitude;
+          updatedVehicle.location_longitude = periodicData.location_longitude;
+          updatedVehicle.temperature_cabin = periodicData.temperature_cabin;
+          updatedVehicle.temperature_ambient = periodicData.temperature_ambient;
+          updatedVehicle.battery_voltage = periodicData.battery_voltage;
+        }
+
+        if (realtimeData) {
+          updatedVehicle.vehicle_speed = realtimeData.vehicle_speed;
+          updatedVehicle.engine_rpm = realtimeData.engine_rpm;
+          updatedVehicle.ignitionOn =
+            realtimeData.engine_status_ignition === 'ON';
+          updatedVehicle.gear_position_mode = realtimeData.gear_position_mode;
+          updatedVehicle.throttle_position = realtimeData.throttle_position;
+          updatedVehicle.gear_position_current_gear =
+            realtimeData.gear_position_current_gear;
+          updatedVehicle.engine_temp = realtimeData.engine_temp;
+          updatedVehicle.coolant_temp = realtimeData.coolant_temp;
+          updatedVehicle.isEV = !!realtimeData.ev_battery_voltage;
+          updatedVehicle.ev_battery_current = realtimeData.ev_battery_current;
+        }
+
+        // 주차중/주행중 업데이트
+        const isDrivingGear =
+          updatedVehicle.gear_position_mode === 'D' ||
+          updatedVehicle.gear_position_mode === 'N';
+        updatedVehicle.state =
+          updatedVehicle.ignitionOn && isDrivingGear ? 'driving' : 'parked';
+
+        return updatedVehicle;
+      });
+    } else {
+      console.log('조회할 수 없는 vehicleId 입니다.', connectedVehicleID);
+    }
+  }, [periodicData, realtimeData, connectedVehicleID]);
+
+  const recent = useMemo<AlertData[]>(
+    () => (alertData ? alertData.slice(0, 2) : []),
+    [alertData]
+  );
+
+  const handleConnect = () => {
+    setVehicle(null);
+    setConnectedVehicleID(inputVehicleID);
   };
 
   return (
     <div className='max-w-xl mx-auto p-10'>
       <header className='mb-3 flex items-center justify-between px-2'>
-        <h1 className='text-xl font-bold text-h-blue'>
-          {vehicle.vehicle_type}
-        </h1>
+        {/* 테스트 끝나면 vehicle_id 입력 받는 기능 삭제하면서 대신 띄울 차량 식별 데이터 (차종 데이터가 들어온다면 차종) */}
+        {/* <h1 className='text-xl font-bold text-h-blue'>
+          {vehicle?.vehicle_id || '차량 ID'}
+        </h1> */}
+        <div className='flex gap-2 mb-4 items-center'>
+          <label htmlFor='vehicleID' className='text-h-blue font-semibold'>
+            차량 아이디
+          </label>
+          <input
+            id='vehicleID'
+            type='text'
+            value={inputVehicleID}
+            onChange={e => setInputVehicleID(e.target.value)}
+            placeholder='차량 아이디를 입력하세요'
+            className='border-1 p-1 rounded-sm max-w-[40%]'
+          />
+          <button
+            className='bg-h-blue rounded-sm text-h-white p-2'
+            onClick={handleConnect}
+          >
+            연결
+          </button>
+        </div>
         <div className='relative'>
           <button
             aria-label='notifications'
@@ -54,12 +168,20 @@ function App() {
                 최근 알림
               </div>
               <div className='p-3'>
-                {recent.map(r => (
-                  <div key={r.id} className='mb-2'>
-                    <div className='font-semibold text-gray-900'>{r.title}</div>
-                    <div className='text-sm text-slate-600'>{r.message}</div>
+                {recent.length > 0 ? (
+                  recent.map(r => (
+                    <div key={r.id} className='mb-2'>
+                      <div className='font-semibold text-gray-900'>
+                        {r.title}
+                      </div>
+                      <div className='text-sm text-slate-600'>{r.message}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className='text-sm text-center text-slate-500'>
+                    새로운 알림이 없습니다.
                   </div>
-                ))}
+                )}
                 <button
                   onClick={() => {
                     setRecentOpen(false);
@@ -74,84 +196,113 @@ function App() {
           )}
         </div>
       </header>
-      {/* 주행중 정보 */}
-      <section className='relative rounded-2xl border p-4 border-h-sand'>
-        <div className='flex items-center justify-between gap-50'>
-          <div
-            className='absolute left-3 top-3 flex items-center gap-2'
-            aria-label={vehicle.state ? 'ignition on' : 'ignition off'}
-          >
-            <div
-              className={`h-3 w-3 rounded-full ${vehicle.state === 'driving' ? 'bg-h-green' : 'bg-h-red'}`}
-            />
-            <span className='text-sm text-slate-500 inline-block'>
-              {vehicle.state === 'driving' ? '주행 중' : '주차 중'}
-            </span>
-          </div>
-        </div>
 
-        <div className='absolute right-3 top-2 font-semibold'>
-          {vehicle.speed} km/h
+      {!vehicle ? (
+        <div className='text-center text-gray-500'>
+          {status === 'connecting'
+            ? `SSE에 연결 중... (${connectedVehicleID})`
+            : '데이터를 기다리는 중...'}
         </div>
-
-        <div className='absolute bottom-2 right-3 flex items-center gap-1.5'>
-          {vehicle.isEV ? (
-            <div className='relative h-[18px] w-10 rounded border-2 border-h-black'>
-              <div className='absolute -right-1 top-[4px] h-[10px] w-1 rounded bg-h-black' />
+      ) : (
+        <>
+          <section className='relative rounded-2xl border p-4 border-h-sand'>
+            <div className='flex items-center justify-between gap-50'>
               <div
-                className='h-full rounded-sm bg-green-500'
-                style={{ width: vehicle.fuelPercent + '%' }}
-              />
+                className='absolute left-3 top-3 flex items-center gap-2'
+                aria-label={
+                  vehicle.state === 'driving' ? 'ignition on' : 'ignition off'
+                }
+              >
+                <div
+                  className={`h-3 w-3 rounded-full ${
+                    vehicle.state === 'driving' ? 'bg-h-green' : 'bg-h-red'
+                  }`}
+                />
+                <span className='text-sm text-slate-500 inline-block'>
+                  {vehicle.state === 'driving' ? '주행 중' : '주차 중'}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div>⛽</div>
-          )}
-          <span className='font-semibold'>{vehicle.fuelPercent}%</span>
-        </div>
-
-        <div className='flex items-center justify-center py-6'>
-          <Vehicle3D mode={vehicle.state} speed={vehicle.speed} />
-        </div>
-
-        {vehicle.wheel && (
-          <div className='grid grid-cols-2 gap-2 text-xs text-h-grey'>
-            <div>FL: {vehicle.wheel.FL}km/h</div>
-            <div className='text-right'>FR: {vehicle.wheel.FR}km/h</div>
-            <div>RL: {vehicle.wheel.RL}km/h</div>
-            <div className='text-right'>RR: {vehicle.wheel.RR}km/h</div>
-          </div>
-        )}
-      </section>
-
-      {/* 정적인 정보들 */}
-      <section className='mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2'>
-        {[
-          ['위치', '서울 강남구'],
-          ['RPM', vehicle.state === 'driving' ? '2400' : '0'],
-          ['기어 위치', vehicle.state === 'driving' ? 'D' : 'P'],
-          ['스로틀', vehicle.state === 'driving' ? '18%' : '0%'],
-          ['기어 단수', vehicle.state === 'driving' ? '3' : '-'],
-          ['엔진 온도', vehicle.state === 'driving' ? '88℃' : '—'],
-          ['냉각수 온도', vehicle.state === 'driving' ? '82℃' : '—'],
-          ['실내 온도', '22℃'],
-          ['실외 온도', '11℃'],
-          ['배터리 전압', '12.6V'],
-          ['타이어 압력', 'F 36 / R 34 psi'],
-          ['차량 방향', 'NE'],
-          ['주차 브레이크', vehicle.state === 'driving' ? '해제' : '체결'],
-          ['차문/트렁크', '모두 닫힘'],
-          ['경고등', '정상'],
-        ].map(([k, v]) => (
-          <div
-            key={k}
-            className='rounded-xl border p-3 border-h-sand bg-h-white'
-          >
-            <div className='text-sm text-h-grey'>{k}</div>
-            <div className='font-semibold'>{v}</div>
-          </div>
-        ))}
-      </section>
-
+            <div className='absolute right-3 top-2 font-semibold'>
+              {vehicle.vehicle_speed} km/h
+            </div>
+            <div className='absolute bottom-2 right-3 flex items-center gap-1.5'>
+              {vehicle.isEV ? (
+                <div className='relative h-[18px] w-10 rounded border-2 border-h-black'>
+                  <div className='absolute -right-1 top-[4px] h-[10px] w-1 rounded bg-h-black' />
+                  <div
+                    className='h-full rounded-sm bg-green-500'
+                    style={{ width: vehicle.fuel_level + '%' }}
+                  />
+                </div>
+              ) : (
+                <div>⛽</div>
+              )}
+              <span className='font-semibold'>{vehicle.fuel_level}%</span>
+            </div>
+            <div className='flex items-center justify-center py-6'>
+              <Vehicle3D mode={vehicle.state} speed={vehicle.vehicle_speed} />
+            </div>
+            {vehicle.tpms && (
+              <div className='flex flex-col ap-2 text-xs text-h-grey'>
+                <div>FL: {vehicle.tpms.FL} kPa</div>
+                <div>FR: {vehicle.tpms.FR} kPa</div>
+                <div>RL: {vehicle.tpms.RL} kPa</div>
+                <div>RR: {vehicle.tpms.RR} kPa</div>
+              </div>
+            )}
+          </section>
+          <section className='mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2'>
+            {[
+              [
+                '위치',
+                `${vehicle.location_latitude}, ${vehicle.location_longitude}`,
+              ],
+              [
+                'RPM',
+                vehicle.state === 'driving' ? `${vehicle.engine_rpm} RPM` : '0',
+              ],
+              ['기어 위치', vehicle.gear_position_mode],
+              [
+                '스로틀',
+                vehicle.state === 'driving'
+                  ? `${vehicle.throttle_position}%`
+                  : '0%',
+              ],
+              [
+                '기어 단수',
+                vehicle.state === 'driving'
+                  ? vehicle.gear_position_current_gear
+                  : '-',
+              ],
+              [
+                '엔진 온도',
+                vehicle.state === 'driving' ? `${vehicle.engine_temp}℃` : '—',
+              ],
+              [
+                '냉각수 온도',
+                vehicle.state === 'driving' ? `${vehicle.coolant_temp}℃` : '—',
+              ],
+              ['실내 온도', `${vehicle.temperature_cabin}℃`],
+              ['실외 온도', `${vehicle.temperature_ambient}℃`],
+              ['배터리 전압', `${vehicle.battery_voltage}V`],
+              [
+                '타이어 압력',
+                `F ${vehicle.tpms.FL} / R ${vehicle.tpms.RL} kPa`,
+              ],
+              ['연료 잔량', `${vehicle.fuel_level}%`],
+            ].map(([k, v]) => (
+              <div
+                key={k}
+                className='rounded-xl border p-3 border-h-sand bg-h-white'
+              >
+                <div className='text-sm text-h-grey'>{k}</div>
+                <div className='font-semibold'>{v}</div>
+              </div>
+            ))}
+          </section>
+        </>
+      )}
       <PWABadge />
     </div>
   );

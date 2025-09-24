@@ -3,5 +3,5 @@ export type Notification = {
   createdAt: string;
   title: string;
   message: string;
-  level: 'info' | 'warning' | 'critical';
+  severity: string;
 };
