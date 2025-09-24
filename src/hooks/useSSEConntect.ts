@@ -56,7 +56,7 @@ const useSSEConnect = (vehicleId: string) => {
   });
 
   useEffect(() => {
-    const url = `http://localhost:8080/api/sse/${vehicleId}`;
+    const url = `http://43.203.235.211:9090/api/sse/${vehicleId}`;
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
