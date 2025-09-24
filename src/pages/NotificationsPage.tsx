@@ -7,7 +7,7 @@ import useSSEConntect from '../hooks/useSSEConntect';
 function NotificationsPage() {
   const navigate = useNavigate();
 
-  const { alertData } = useSSEConntect('1', true);
+  const { alertData } = useSSEConntect('1');
   const items = useMemo<AlertData[] | null>(() => alertData, [alertData]);
 
   return (
