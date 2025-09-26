@@ -14,7 +14,7 @@ build:
   before_script:
     - apk add --no-cache curl
     - apk add --no-cache python3
-    - pip3 install awscli
+    - pip install awscli
     - aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
     - aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
     - aws configure set default.region "$AWS_DEFAULT_REGION"
