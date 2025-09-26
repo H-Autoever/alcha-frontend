@@ -1,0 +1,62 @@
+# stages: 파이프라인의 실행 단계를 정의합니다.
+stages:
+  - build
+  - deploy
+
+# build: Docker 이미지를 빌드하고 ECR에 푸시하는 단계입니다.
+build:
+  stage: build
+  # Docker CLI와 Docker-in-Docker(dind)를 사용하기 위한 이미지입니다.
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  # 스크립트 실행 전에 Docker에 로그인합니다.
+  before_script:
+    - apk add --no-cache curl
+    - apk add --no-cache python3
+    - pip3 install awscli
+    - aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+    - aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+    - aws configure set default.region "$AWS_DEFAULT_REGION"
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URL
+
+  script:
+    - docker build -t alcha-frontend:v$CI_COMMIT_SHORT_SHA .
+    - docker tag alcha-frontend:v$CI_COMMIT_SHORT_SHA $ECR_REGISTRY_URL:v$CI_COMMIT_SHORT_SHA
+    - docker push $ECR_REGISTRY_URL:v$CI_COMMIT_SHORT_SHA
+
+  # main 브랜치에 푸시될 때만 이 단계가 실행됩니다.
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+  tags:
+    - alcha-frontend
+# deploy: ECR 이미지를 EC2에 배포하는 단계입니다.
+deploy:
+  stage: deploy
+  # SSH 클라이언트가 설치된 이미지입니다.
+  image: alpine/git
+  before_script:
+    # SSH 클라이언트를 설치하고 SSH 키를 설정합니다.
+    - 'which ssh-agent || (apk add --no-cache openssh-client)'
+    - mkdir -p ~/.ssh
+    # GitLab 변수에 저장된 개인 키를 파일로 만듭니다.
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    # SSH 키 파일의 권한을 설정합니다.
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    # EC2 호스트의 SSH 키를 등록하여 보안 경고를 무시합니다.
+    - ssh-keyscan -H $EC2_HOST_IP >> ~/.ssh/known_hosts
+
+  script:
+    # SSH로 EC2에 접속하여 도커 명령어를 실행합니다.
+    # $SSH_USER: ec2-user
+    # $EC2_HOST_IP: EC2 인스턴스의 공인 IP 주소
+    - ssh $SSH_USER@$EC2_HOST_IP "docker pull $ECR_REGISTRY_URL:v$CI_COMMIT_SHORT_SHA && docker stop alcha-frontend-container || true && docker rm alcha-frontend-container || true && docker run -d --name alcha-frontend-container -p 5173:3000 $ECR_REGISTRY_URL:v$CI_COMMIT_SHORT_SHA"
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+  tags:
+    - alcha-frontend
