@@ -37,7 +37,7 @@ build:
 deploy:
   stage: deploy
   # SSH 클라이언트가 설치된 이미지입니다.
-  image: alpine/git
+  image: alpine/ssh
   before_script:
     # SSH 클라이언트를 설치하고 SSH 키를 설정합니다.
     - 'which ssh-agent || (apk add --no-cache openssh-client)'
