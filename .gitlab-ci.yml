@@ -43,7 +43,7 @@ deploy:
     - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh
     # GitLab 변수에 저장된 개인 키를 파일로 만듭니다.
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_rsa
     # SSH 키 파일의 권한을 설정합니다.
     - chmod 600 ~/.ssh/id_rsa
     - eval "$(ssh-agent -s)"
