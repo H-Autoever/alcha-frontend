@@ -10,6 +10,8 @@ build:
   image: docker:20.10.16
   services:
     - docker:20.10.16-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ''
   # 스크립트 실행 전에 Docker에 로그인합니다.
   before_script:
     - apk add --no-cache curl
