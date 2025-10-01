@@ -82,3 +82,5 @@ deploy:
       else
         echo "No changes detected in deployment.yaml. Skipping commit."
       fi
+  tags:
+    - alcha-frontend
