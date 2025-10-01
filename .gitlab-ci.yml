@@ -24,8 +24,8 @@ build:
 
   script:
     - docker build -t alcha-frontend:latest .
-    - docker tag alcha-frontend:latest $ECR_REGISTRY_URL:latest
-    - docker push $ECR_REGISTRY_URL:latest
+    - docker tag alcha-frontend:latest $ECR_REGISTRY_URL:$CI_PIPELINE_ID
+    - docker push $ECR_REGISTRY_URL:$CI_PIPELINE_ID
 
   # main 브랜치에 푸시될 때만 이 단계가 실행됩니다.
   rules:
@@ -33,3 +33,52 @@ build:
 
   tags:
     - alcha-frontend
+
+deploy:
+  stage: deploy
+  # sed 명령을 포함하는 경량 이미지를 사용합니다.
+  image: alpine/git:latest
+  
+  # Helm Chart 관련 내용은 제거하고, sed를 위한 준비는 불필요합니다.
+  before_script:
+    # --- SSH 설정 ---
+    - apk add openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$GITOPS_REPO_SSH_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan 4.230.1.132 >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    # yq 설치는 제거했습니다.
+
+  script:
+    - export NEW_TAG=$CI_PIPELINE_ID
+    # ECR_REGISTRY_URL 변수를 사용하여 최종 이미지 URL을 생성합니다.
+    - export FULL_IMAGE_URL="${ECR_REGISTRY_URL}:${NEW_TAG}" 
+    
+    # 1. GitOps 저장소 클론
+    - git clone git@4.230.1.132:carpoor/alcha-gitops.git
+    - cd alcha-gitops
+    
+    # 2. git 사용자 정보 설정
+    - git config user.name "GitLab CI Runner"
+    - git config user.email "ci-runner@gitlab.com"
+
+    # 3. deployment.yaml 파일 수정 (sed 사용)
+    # 기존 플레이스홀더를 FULL_IMAGE_URL 값으로 치환합니다.
+    # 주의: sed 패턴에 슬래시(/)가 포함될 경우 구분자로 다른 문자(예: |)를 사용합니다.
+    - sed -i "s|__ECR_REGISTRY_URL__:latest|${ECR_REGISTRY_URL}:${NEW_TAG}|" deployment.yaml
+    
+    # 4. Git Write Back (커밋 및 푸시)
+    # 수정된 deployment.yaml 파일만 추적하고 커밋합니다.
+    - git add deployment.yaml
+    
+    # 5. 변경 사항이 있을 경우에만 커밋하도록 처리
+    - |
+      if ! git diff-index --quiet HEAD; then
+        echo "Updating image tag and pushing to GitOps repo."
+        git commit -m "ci: Update React app image tag to ${NEW_TAG}"
+        git push origin HEAD:main
+      else
+        echo "No changes detected in deployment.yaml. Skipping commit."
+      fi
