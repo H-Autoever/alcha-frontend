@@ -1,7 +1,6 @@
 # stages: 파이프라인의 실행 단계를 정의합니다.
 stages:
   - build
-  - deploy
 
 # build: Docker 이미지를 빌드하고 ECR에 푸시하는 단계입니다.
 build:
@@ -21,6 +20,12 @@ build:
     - aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
     - aws configure set default.region "$AWS_DEFAULT_REGION"
     - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY_URL
+    - |
+      if [ -z "$VITE_API_SERVER_URL" ]; then
+        echo "VITE_API_SERVER_URL is not set. Configure it in GitLab CI/CD variables." >&2
+        exit 1
+      fi
+    - printf "VITE_API_SERVER_URL=%s\n" "$VITE_API_SERVER_URL" > .env.production
 
   script:
     - docker build -t alcha-frontend:latest .
