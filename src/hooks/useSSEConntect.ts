@@ -46,6 +46,7 @@ interface SSEState {
   error: Event | null;
 }
 
+const apiURL = import.meta.env.VITE_API_SERVER_URL;
 const useSSEConnect = (vehicleId: string) => {
   const [state, setState] = useState<SSEState>({
     periodicData: null,
@@ -56,7 +57,7 @@ const useSSEConnect = (vehicleId: string) => {
   });
 
   useEffect(() => {
-    const url = `http://43.203.235.211:9090/api/sse/${vehicleId}`;
+    const url = `${apiURL}/api/sse/${vehicleId}`;
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
