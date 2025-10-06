@@ -34,7 +34,7 @@ build:
 
   # main 브랜치에 푸시될 때만 이 단계가 실행됩니다.
   rules:
-    - if: '$CI_COMMIT_BRANCH == "8-feature/move-to-eks-cluster"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
 
   tags:
     - alcha-frontend
