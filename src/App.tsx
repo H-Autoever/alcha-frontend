@@ -138,7 +138,7 @@ function App() {
         </h1> */}
         <div className='flex gap-2 mb-4 items-center'>
           <label htmlFor='vehicleID' className='text-h-blue font-semibold'>
-            차량 ID
+            차량 아이디
           </label>
           <input
             id='vehicleID'
