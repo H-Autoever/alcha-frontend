@@ -45,6 +45,7 @@ interface SSEState {
   status: 'connecting' | 'connected' | 'error' | 'closed';
   error: Event | null;
 }
+
 const apiURL = import.meta.env.VITE_API_SERVER_URL;
 const useSSEConnect = (vehicleId: string) => {
   const [state, setState] = useState<SSEState>({
