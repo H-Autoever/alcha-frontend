@@ -6,7 +6,8 @@ import {
   Line,
   Bounds,
 } from '@react-three/drei';
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef, memo } from 'react';
+import type { MutableRefObject } from 'react';
 import * as THREE from 'three';
 
 function VehicleModel({ rotationY }: { rotationY: number }) {
@@ -38,11 +39,11 @@ type VehicleMode = 'driving' | 'parked';
 function Road({
   visible,
   rotationY,
-  speed,
+  speedRef,
 }: {
   visible: boolean;
   rotationY: number;
-  speed: number;
+  speedRef: MutableRefObject<number>;
 }) {
   const smoothed = useRef(0);
   const texture = useMemo(() => {
@@ -68,6 +69,7 @@ function Road({
 
   useFrame((_, delta) => {
     if (!visible) return;
+    const speed = speedRef.current;
     smoothed.current += (speed - smoothed.current) * Math.min(1, delta * 5);
     const k = 0.008; // km/h → 텍스처 스크롤 계수 (원하는 느낌에 맞게 튜닝)
     texture.offset.y -= delta * (smoothed.current * k);
@@ -162,12 +164,12 @@ function CameraRig({ mode, speed }: { mode: VehicleMode; speed: number }) {
 }
 */
 
-export default function Vehicle3D({
+const Vehicle3D = memo(function Vehicle3D({
   mode,
-  speed,
+  speedRef,
 }: {
   mode: VehicleMode;
-  speed: number;
+  speedRef: MutableRefObject<number>;
 }) {
   const vehicleRotationY = mode === 'driving' ? -Math.PI / 4 : -Math.PI;
   return (
@@ -200,7 +202,7 @@ export default function Vehicle3D({
           <Road
             visible={mode === 'driving'}
             rotationY={vehicleRotationY}
-            speed={speed}
+            speedRef={speedRef}
           />
           <ParkingOutline visible={mode === 'parked'} />
 
@@ -233,7 +235,9 @@ export default function Vehicle3D({
       </Suspense>
     </div>
   );
-}
+});
+
+export default Vehicle3D;
 
 // glTF 모델 미리 로드
 useGLTF.preload('/scene.gltf');
