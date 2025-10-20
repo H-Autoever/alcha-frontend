@@ -1,6 +1,6 @@
 import PWABadge from './PWABadge.tsx';
 import { Bell } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Vehicle3D from './components/Vehicle3D.tsx';
 import { VehicleState } from './types/VehicleState.ts';
@@ -16,6 +16,7 @@ function App() {
   const [connectedVehicleID, setConnectedVehicleID] =
     useState(currentVehicleId);
   const [vehicle, setVehicle] = useState<VehicleState | null>(null);
+  const vehicleSpeedRef = useRef(0);
 
   useEffect(() => {
     // vehicle 상태가  null인 경우
@@ -65,6 +66,7 @@ function App() {
           accelerometer_y: 0,
           accelerometer_z: 0,
         };
+        vehicleSpeedRef.current = initialVehicle.vehicle_speed;
         setVehicle(initialVehicle);
       }
     }
@@ -114,6 +116,8 @@ function App() {
         updatedVehicle.state =
           updatedVehicle.ignitionOn && isDrivingGear ? 'driving' : 'parked';
 
+        vehicleSpeedRef.current = updatedVehicle.vehicle_speed;
+
         return updatedVehicle;
       });
     } else {
@@ -138,6 +142,7 @@ function App() {
 
   const handleConnect = () => {
     setVehicle(null);
+    vehicleSpeedRef.current = 0;
     setConnectedVehicleID(inputVehicleID);
   };
 
@@ -258,7 +263,7 @@ function App() {
               <span className='font-semibold'>{vehicle.fuel_level}%</span>
             </div>
             <div className='flex items-center justify-center py-6'>
-              <Vehicle3D mode={vehicle.state} speed={vehicle.vehicle_speed} />
+              <Vehicle3D mode={vehicle.state} speedRef={vehicleSpeedRef} />
             </div>
             {vehicle.tpms && (
               <div className='flex flex-col ap-2 text-xs text-h-grey'>
@@ -303,10 +308,11 @@ function App() {
               ['실내 온도', `${vehicle.temperature_cabin}℃`],
               ['실외 온도', `${vehicle.temperature_ambient}℃`],
               ['배터리 전압', `${vehicle.battery_voltage}V`],
-              [
-                '타이어 압력',
-                `F ${vehicle.tpms.FL} / R ${vehicle.tpms.RL} kPa`,
-              ],
+              // [
+              //   '타이어 압력',
+              //   `FL ${vehicle.tpms.FL} / FR ${vehicle.tpms.FR} \n
+              //    RL ${vehicle.tpms.RL} / RR ${vehicle.tpms.RR}kPa`,
+              // ],
               ['연료 잔량', `${vehicle.fuel_level}%`],
             ].map(([k, v]) => (
               <div
