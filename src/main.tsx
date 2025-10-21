@@ -4,6 +4,8 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import './index.css';
 import App from './App.tsx';
 import NotificationsPage from './pages/NotificationsPage.tsx';
+import { VehicleProvider } from './contexts/VehicleContext.tsx';
+import { SSEProvider } from './contexts/SSEContext.tsx';
 
 const router = createBrowserRouter([
   {
@@ -18,6 +20,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <VehicleProvider>
+      <SSEProvider>
+        <RouterProvider router={router} />
+      </SSEProvider>
+    </VehicleProvider>
   </StrictMode>
 );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAlertLabel } from '../constants/alerts';
 
 interface PeriodicData {
   vehicle_id: string;
@@ -30,33 +31,42 @@ interface RealtimeData {
   ev_battery_soc: number;
 }
 
-export interface AlertData {
-  id: string;
-  createdAt: string;
-  title: string;
+interface RawAlertData {
+  vehicleId: string;
+  timestamp: string;
+  alertType: string;
   message: string;
-  severity: string;
+}
+
+export interface AlertData {
+  vehicle_id: string;
+  timestamp: string;
+  alertType: string;
+  message: string;
 }
 
 interface SSEState {
   periodicData: PeriodicData | null;
   realtimeData: RealtimeData | null;
-  alertData: AlertData[] | null;
+  alerts: AlertData[];
   status: 'connecting' | 'connected' | 'error' | 'closed';
   error: Event | null;
 }
 
 const apiURL = import.meta.env.VITE_API_SERVER_URL;
 const useSSEConnect = (vehicleId: string) => {
-  const [state, setState] = useState<SSEState>({
+  const createInitialState = (): SSEState => ({
     periodicData: null,
     realtimeData: null,
-    alertData: null,
+    alerts: [],
     status: 'connecting',
     error: null,
   });
+  const [state, setState] = useState<SSEState>(createInitialState);
 
   useEffect(() => {
+    setState(createInitialState());
+
     const url = `${apiURL}/api/sse/${vehicleId}`;
     const eventSource = new EventSource(url);
 
@@ -76,12 +86,16 @@ const useSSEConnect = (vehicleId: string) => {
     });
 
     eventSource.addEventListener('alert_data', event => {
-      const data = JSON.parse(event.data) as AlertData;
+      const raw = JSON.parse(event.data) as RawAlertData;
+      const data: AlertData = {
+        vehicle_id: raw.vehicleId,
+        timestamp: raw.timestamp,
+        alertType: getAlertLabel(raw.alertType),
+        message: raw.message,
+      };
       setState(prevState => {
-        const newAlertData = prevState.alertData
-          ? [data, ...prevState.alertData]
-          : [data];
-        return { ...prevState, alertData: newAlertData.slice(0, 10) };
+        const alerts = [data, ...prevState.alerts].slice(0, 2);
+        return { ...prevState, alerts };
       });
     });
 
