@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useVehicle } from '@/contexts/VehicleContext.tsx';
 import { Notification } from '@/types/Notification';
+import { getAlertLabel } from '@/constants/alerts';
 
 const apiURL = import.meta.env.VITE_API_SERVER_URL;
 
@@ -39,7 +40,11 @@ function NotificationsPage() {
         }
         const data = (await response.json()) as Notification[];
         if (!cancelled) {
-          setHistory(data);
+          const labeledData = data.map(notification => ({
+            ...notification,
+            alertType: getAlertLabel(notification.alertType),
+          }));
+          setHistory(labeledData);
         }
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;

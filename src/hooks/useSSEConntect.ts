@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getAlertLabel } from '../constants/alerts';
 
 interface PeriodicData {
   vehicle_id: string;
@@ -89,7 +90,7 @@ const useSSEConnect = (vehicleId: string) => {
       const data: AlertData = {
         vehicle_id: raw.vehicleId,
         timestamp: raw.timestamp,
-        alertType: raw.alertType,
+        alertType: getAlertLabel(raw.alertType),
         message: raw.message,
       };
       setState(prevState => {
