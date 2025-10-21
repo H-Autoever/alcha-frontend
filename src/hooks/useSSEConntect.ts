@@ -488,10 +488,26 @@ const useSSEConnect = (vehicleId: string) => {
             message: raw.message,
           };
 
+          const hadPeriodicStale = staleStateRef.current.periodic;
+          const hadRealtimeStale = staleStateRef.current.realtime;
+          staleStateRef.current = { periodic: false, realtime: false };
+
           updateState(prevState => {
             const alerts = [data, ...prevState.alerts].slice(0, 2);
-            return { ...prevState, alerts };
+            const nextState: SSEState = {
+              ...prevState,
+              alerts,
+              recoveryAttempts: 0,
+            };
+            return applyStaleness(nextState);
           });
+
+          if (hadPeriodicStale) {
+            startPeriodicWatchdogs();
+          }
+          if (hadRealtimeStale) {
+            startRealtimeWatchdogs();
+          }
         } catch (error) {
           console.error('alert_data 파싱 실패', error);
         }
