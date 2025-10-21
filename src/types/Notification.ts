@@ -1,7 +1,6 @@
 export type Notification = {
-  id: string;
-  createdAt: string;
-  title: string;
+  vehicle_id: string;
+  timestamp: string;
+  alertType: string;
   message: string;
-  severity: string;
 };
