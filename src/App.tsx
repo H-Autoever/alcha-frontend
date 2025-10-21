@@ -1,17 +1,18 @@
 import PWABadge from './PWABadge.tsx';
-import { Bell } from 'lucide-react';
+import { AlertTriangle, Bell, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Vehicle3D from './components/Vehicle3D.tsx';
 import { VehicleState } from './types/VehicleState.ts';
 import { useVehicle } from '@/contexts/VehicleContext.tsx';
 import { useSSE } from '@/contexts/SSEContext.tsx';
+import SSEStatusToast from '@/components/SSEStatusToast.tsx';
 
 function App() {
   const [recentOpen, setRecentOpen] = useState(false);
   const navigate = useNavigate();
   const { vehicleId: currentVehicleId, setVehicleId } = useVehicle();
-  const { periodicData, realtimeData, alerts, status } = useSSE();
+  const { periodicData, realtimeData, alerts, status, issue } = useSSE();
   const [inputVehicleID, setInputVehicleID] = useState(currentVehicleId);
   const [connectedVehicleID, setConnectedVehicleID] =
     useState(currentVehicleId);
@@ -126,6 +127,13 @@ function App() {
   }, [periodicData, realtimeData, connectedVehicleID]);
 
   useEffect(() => {
+    if (status === 'error') {
+      setVehicle(null);
+      vehicleSpeedRef.current = 0;
+    }
+  }, [status]);
+
+  useEffect(() => {
     setVehicleId(connectedVehicleID);
   }, [connectedVehicleID, setVehicleId]);
 
@@ -148,6 +156,7 @@ function App() {
 
   return (
     <div className='max-w-xl mx-auto p-10'>
+      <SSEStatusToast />
       <header className='mb-3 flex items-center justify-between px-2'>
         {/* 테스트 끝나면 vehicle_id 입력 받는 기능 삭제하면서 대신 띄울 차량 식별 데이터 (차종 데이터가 들어온다면 차종) */}
         {/* <h1 className='text-xl font-bold text-h-blue'>
@@ -220,10 +229,24 @@ function App() {
       </header>
 
       {!vehicle ? (
-        <div className='text-center text-gray-500'>
-          {status === 'connecting'
-            ? `SSE에 연결 중... (${connectedVehicleID})`
-            : '데이터를 기다리는 중...'}
+        <div className='flex min-h-[320px] flex-col items-center justify-center gap-4 text-center text-gray-500 whitespace-pre-line'>
+          {status === 'error' ? (
+            <AlertTriangle className='h-10 w-10 text-amber-500' aria-hidden />
+          ) : (
+            <Loader2
+              className='h-10 w-10 animate-spin text-h-blue'
+              aria-hidden
+            />
+          )}
+          <p>
+            {status === 'connecting'
+              ? `SSE에 연결 중... (${connectedVehicleID})`
+              : status === 'error'
+                ? '연결이 종료되었습니다. \n 잠시 후 다시 시도해 주세요.'
+                : issue
+                  ? issue.message
+                  : '데이터를 기다리는 중...'}
+          </p>
         </div>
       ) : (
         <>
