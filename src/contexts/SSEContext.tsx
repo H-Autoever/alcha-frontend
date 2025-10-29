@@ -18,6 +18,8 @@ type SSEContextValue = {
   realtimeData: ReturnType<typeof useSSEConnect>['realtimeData'];
   alerts: AlertData[];
   status: ReturnType<typeof useSSEConnect>['status'];
+  issue: ReturnType<typeof useSSEConnect>['issue'];
+  recoveryAttempts: ReturnType<typeof useSSEConnect>['recoveryAttempts'];
   error: ReturnType<typeof useSSEConnect>['error'];
 };
 
@@ -28,6 +30,8 @@ const initialValue: SSEContextValue = {
   realtimeData: null,
   alerts: [],
   status: 'connecting',
+  issue: null,
+  recoveryAttempts: 0,
   error: null,
 };
 
@@ -56,9 +60,19 @@ export function SSEProvider({ children }: PropsWithChildren) {
       realtimeData: sseState.realtimeData,
       alerts: sseState.alerts,
       status: sseState.status,
+      issue: sseState.issue,
+      recoveryAttempts: sseState.recoveryAttempts,
       error: sseState.error,
     });
-  }, [sseState.periodicData, sseState.realtimeData, sseState.alerts, sseState.status, sseState.error]);
+  }, [
+    sseState.periodicData,
+    sseState.realtimeData,
+    sseState.alerts,
+    sseState.status,
+    sseState.issue,
+    sseState.recoveryAttempts,
+    sseState.error,
+  ]);
 
   const value = useMemo(() => state, [state]);
 
