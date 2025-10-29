@@ -7,7 +7,7 @@ import {
   Bounds,
 } from '@react-three/drei';
 import { Suspense, useEffect, useMemo, useRef, memo } from 'react';
-import type { MutableRefObject } from 'react';
+import type { RefObject } from 'react';
 import * as THREE from 'three';
 
 function VehicleModel({ rotationY }: { rotationY: number }) {
@@ -43,7 +43,7 @@ function Road({
 }: {
   visible: boolean;
   rotationY: number;
-  speedRef: MutableRefObject<number>;
+  speedRef: RefObject<number>;
 }) {
   const smoothed = useRef(0);
   const texture = useMemo(() => {
@@ -169,7 +169,7 @@ const Vehicle3D = memo(function Vehicle3D({
   speedRef,
 }: {
   mode: VehicleMode;
-  speedRef: MutableRefObject<number>;
+  speedRef: RefObject<number>;
 }) {
   const vehicleRotationY = mode === 'driving' ? -Math.PI / 4 : -Math.PI;
   return (
