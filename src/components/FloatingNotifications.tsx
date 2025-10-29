@@ -1,24 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertData } from '@/hooks/useSSEConntect';
 
-type RecentNotification = {
-  id: string;
-  title: string;
-  message: string;
+type FloatingNotificationsProps = {
+  alerts?: AlertData[];
 };
 
-function FloatingNotifications() {
+function FloatingNotifications({ alerts = [] }: FloatingNotificationsProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-
-  const recent: RecentNotification[] = [
-    { id: 'n1', title: '배터리 전압 낮음', message: '12.1V로 낮아졌습니다.' },
-    {
-      id: 'n2',
-      title: '문 미닫힘',
-      message: '좌측 뒷문이 완전히 닫히지 않았습니다.',
-    },
-  ];
+  const recent = useMemo(() => alerts.slice(0, 2), [alerts]);
 
   return (
     <>
@@ -66,14 +57,23 @@ function FloatingNotifications() {
             최근 알림
           </div>
           <div style={{ padding: 12 }}>
-            {recent.map(r => (
-              <div key={r.id} style={{ marginBottom: 8 }}>
-                <div style={{ fontWeight: 600 }}>{r.title}</div>
-                <div style={{ fontSize: 14, color: '#334155' }}>
-                  {r.message}
+            {recent.length > 0 ? (
+              recent.map(alert => (
+                <div
+                  key={`${alert.vehicle_id}-${alert.timestamp}`}
+                  style={{ marginBottom: 8 }}
+                >
+                  <div style={{ fontWeight: 600 }}>{alert.alertType}</div>
+                  <div style={{ fontSize: 14, color: '#334155' }}>
+                    {alert.message}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div style={{ fontSize: 14, color: '#64748b', marginBottom: 8 }}>
+                새로운 알림이 없습니다.
               </div>
-            ))}
+            )}
             <button
               onClick={() => {
                 setOpen(false);
