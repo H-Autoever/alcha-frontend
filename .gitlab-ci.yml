@@ -29,8 +29,8 @@ build:
 
   script:
     - docker build -t alcha-frontend:latest .
-    - docker tag alcha-frontend:latest $ECR_REGISTRY_URL:$CI_PIPELINE_ID
-    - docker push $ECR_REGISTRY_URL:$CI_PIPELINE_ID
+    - docker tag alcha-frontend:latest $ECR_REGISTRY_URL:$CI_COMMIT_SHA
+    - docker push $ECR_REGISTRY_URL:$CI_COMMIT_SHA
 
   # main 브랜치에 푸시될 때만 이 단계가 실행됩니다.
   rules:
