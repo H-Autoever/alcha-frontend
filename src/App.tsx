@@ -181,7 +181,7 @@ function App() {
             className='bg-h-blue rounded-sm text-h-white p-2'
             onClick={handleConnect}
           >
-            연결
+            연결하기
           </button>
         </div>
         <div className='relative'>
