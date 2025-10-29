@@ -76,6 +76,9 @@ function App() {
       // 💡 새로운 데이터로 필요한 속성만 업데이트
       setVehicle(prevVehicle => {
         if (!prevVehicle) return null;
+        if (!periodicData && !realtimeData) {
+          return prevVehicle;
+        }
 
         const updatedVehicle = { ...prevVehicle };
 
@@ -127,11 +130,11 @@ function App() {
   }, [periodicData, realtimeData, connectedVehicleID]);
 
   useEffect(() => {
-    if (status === 'error') {
+    if (status === 'error' && issue?.type === 'client-offline') {
       setVehicle(null);
       vehicleSpeedRef.current = 0;
     }
-  }, [status]);
+  }, [status, issue]);
 
   useEffect(() => {
     setVehicleId(connectedVehicleID);

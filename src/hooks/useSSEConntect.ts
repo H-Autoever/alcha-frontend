@@ -77,7 +77,6 @@ const PERIODIC_DEGRADE_MS = PERIODIC_EXPECTED_INTERVAL_MS + PERIODIC_GRACE_MS;
 const DEGRADE_RECONNECT_DELAY_MS = 5000;
 const MAX_STALE_RECONNECT_ATTEMPTS = 5;
 const SERVER_RETRY_DELAY_MS = 500;
-const OFFLINE_RETRY_DELAY_MS = 2000;
 const DATA_RETRY_DELAY_MS = 200;
 const STALE_NOTICE_MESSAGE = '실시간 데이터 수신이 지연되고 있습니다.';
 const STALE_RETRY_MESSAGE = (attempt: number) =>
@@ -332,7 +331,10 @@ const useSSEConnect = (vehicleId: string) => {
 
     const handleClientOffline = (event?: Event) => {
       updateState(prevState => {
-        if (prevState.status === 'error' && prevState.issue?.type === 'client-offline') {
+        if (
+          prevState.status === 'error' &&
+          prevState.issue?.type === 'client-offline'
+        ) {
           return prevState;
         }
 

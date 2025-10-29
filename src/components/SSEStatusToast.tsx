@@ -8,7 +8,7 @@ interface ToastState {
   tone: ToastTone;
 }
 
-const AUTO_DISMISS_MS = 4000;
+const AUTO_DISMISS_MS = 1000;
 
 const toneStyles: Record<ToastTone, string> = {
   info: 'bg-slate-900/90 text-white border-slate-700',
@@ -45,8 +45,12 @@ const SSEStatusToast = () => {
   useEffect(() => {
     const currentIssueType = issue?.type ?? null;
     const wasDegraded =
-      previousStatusRef.current === 'degraded' && isStaleIssue(previousIssueRef.current);
-    const isDegradedNow = status === 'degraded' && isStaleIssue(currentIssueType) && recoveryAttempts === 0;
+      previousStatusRef.current === 'degraded' &&
+      isStaleIssue(previousIssueRef.current);
+    const isDegradedNow =
+      status === 'degraded' &&
+      isStaleIssue(currentIssueType) &&
+      recoveryAttempts === 0;
 
     if (isDegradedNow && !wasDegraded) {
       if (issue) {
@@ -75,7 +79,7 @@ const SSEStatusToast = () => {
     () => () => {
       clearHideTimeout();
     },
-    [],
+    []
   );
 
   if (!toast) {
