@@ -32,21 +32,21 @@ function App() {
         const ignitionOn = realtimeData?.engine_status_ignition === 'ON';
         const gearMode = realtimeData?.gear_position_mode || 'P';
         const isDrivingGear = gearMode === 'D' || gearMode === 'N';
+        // 시동과 기어 상태로 주행중/주차중 판단
         const vehicleState = (
           ignitionOn && isDrivingGear ? 'driving' : 'parked'
         ) as 'driving' | 'parked';
+
         // 💡 둘 중 하나라도 데이터가 들어오면 기본 vehicle 객체 생성
         const initialVehicle = {
           state: vehicleState,
           vehicle_id:
-            periodicData?.vehicle_id || realtimeData?.vehicle_id || 'N/A',
+            periodicData?.vehicle_id || realtimeData?.vehicle_id || 'GRANDEUR',
           vehicle_speed: realtimeData?.vehicle_speed || 0,
           engine_rpm: realtimeData?.engine_rpm || 0,
           ignitionOn: realtimeData?.engine_status_ignition === 'ON' || false,
           gear_position_mode: realtimeData?.gear_position_mode || 'P',
           fuel_level: periodicData?.fuel_level || 0,
-          isEV: !!realtimeData?.ev_battery_voltage,
-          ev_battery_current: realtimeData?.ev_battery_current || 0,
           tpms: {
             FL: periodicData?.tpms_front_left || 0,
             FR: periodicData?.tpms_front_right || 0,
@@ -63,9 +63,6 @@ function App() {
             realtimeData?.gear_position_current_gear || 0,
           engine_temp: realtimeData?.engine_temp || 0,
           coolant_temp: realtimeData?.coolant_temp || 0,
-          accelerometer_x: 0,
-          accelerometer_y: 0,
-          accelerometer_z: 0,
         };
         vehicleSpeedRef.current = initialVehicle.vehicle_speed;
         setVehicle(initialVehicle);
@@ -109,8 +106,6 @@ function App() {
             realtimeData.gear_position_current_gear;
           updatedVehicle.engine_temp = realtimeData.engine_temp;
           updatedVehicle.coolant_temp = realtimeData.coolant_temp;
-          updatedVehicle.isEV = !!realtimeData.ev_battery_voltage;
-          updatedVehicle.ev_battery_current = realtimeData.ev_battery_current;
         }
 
         // 주차중/주행중 업데이트
@@ -149,9 +144,11 @@ function App() {
     );
   }, [currentVehicleId]);
 
+  // 최근 알림 2개
   const recent = useMemo(() => alerts.slice(0, 2), [alerts]);
 
-  const handleConnect = () => {
+  // 차량 ID 변경
+  const changeVehicleID = () => {
     setVehicle(null);
     vehicleSpeedRef.current = 0;
     setConnectedVehicleID(inputVehicleID);
@@ -163,11 +160,11 @@ function App() {
       <header className='mb-3 flex items-center justify-between px-2'>
         {/* 테스트 끝나면 vehicle_id 입력 받는 기능 삭제하면서 대신 띄울 차량 식별 데이터 (차종 데이터가 들어온다면 차종) */}
         {/* <h1 className='text-xl font-bold text-h-blue'>
-          {vehicle?.vehicle_id || '차량 ID'}
+          {vehicle?.vehicle_id}
         </h1> */}
-        <div className='flex gap-2 mb-4 items-center'>
+        <div className='flex gap-2 items-center'>
           <label htmlFor='vehicleID' className='text-h-blue font-semibold'>
-            차량 아이디
+            차량 ID
           </label>
           <input
             id='vehicleID'
@@ -175,21 +172,22 @@ function App() {
             value={inputVehicleID}
             onChange={e => setInputVehicleID(e.target.value)}
             placeholder='차량 아이디를 입력하세요'
-            className='border-1 p-1 rounded-sm max-w-[40%]'
+            className='border-1 p-2 rounded-sm max-w-[40%]'
           />
           <button
             className='bg-h-blue rounded-sm text-h-white p-2'
-            onClick={handleConnect}
+            onClick={changeVehicleID}
           >
-            연결하기
+            연결
           </button>
         </div>
         <div className='relative'>
           <button
             aria-label='notifications'
             onClick={() => setRecentOpen(v => !v)}
+            className='flex items-center'
           >
-            <Bell size={20} fill='var(--color-h-blue)' />
+            <Bell size={25} fill='var(--color-h-blue)' />
           </button>
           {recentOpen && (
             <div className='absolute right-0 top-10 z-20 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl'>
@@ -212,7 +210,7 @@ function App() {
                     </div>
                   ))
                 ) : (
-                  <div className='text-sm text-center text-slate-500'>
+                  <div className='text-sm text-center text-slate-500 p-1'>
                     새로운 알림이 없습니다.
                   </div>
                 )}
@@ -274,19 +272,8 @@ function App() {
             <div className='absolute right-3 top-2 font-semibold'>
               {vehicle.vehicle_speed} km/h
             </div>
-            <div className='absolute bottom-2 right-3 flex items-center gap-1.5'>
-              {vehicle.isEV ? (
-                <div className='relative h-[18px] w-10 rounded border-2 border-h-black'>
-                  <div className='absolute -right-1 top-[4px] h-[10px] w-1 rounded bg-h-black' />
-                  <div
-                    className='h-full rounded-sm bg-green-500'
-                    style={{ width: vehicle.fuel_level + '%' }}
-                  />
-                </div>
-              ) : (
-                <div>⛽</div>
-              )}
-              <span className='font-semibold'>{vehicle.fuel_level}%</span>
+            <div className='absolute bottom-2 right-3'>
+              <span className='font-semibold'>⛽ {vehicle.fuel_level}%</span>
             </div>
             <div className='flex items-center justify-center py-6'>
               <Vehicle3D mode={vehicle.state} speedRef={vehicleSpeedRef} />
@@ -300,52 +287,98 @@ function App() {
               </div>
             )}
           </section>
-          <section className='mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2'>
-            {[
-              ['위치', `서울특별시 금천구 가산동`],
-              [
-                'RPM',
-                vehicle.state === 'driving' ? `${vehicle.engine_rpm} RPM` : '0',
-              ],
-              ['기어 위치', vehicle.gear_position_mode],
-              [
-                '스로틀',
-                vehicle.state === 'driving'
-                  ? `${vehicle.throttle_position}%`
-                  : '0%',
-              ],
-              [
-                '기어 단수',
-                vehicle.state === 'driving'
-                  ? vehicle.gear_position_current_gear
-                  : '-',
-              ],
-              [
-                '엔진 온도',
-                vehicle.state === 'driving' ? `${vehicle.engine_temp}℃` : '—',
-              ],
-              [
-                '냉각수 온도',
-                vehicle.state === 'driving' ? `${vehicle.coolant_temp}℃` : '—',
-              ],
-              ['실내 온도', `${vehicle.temperature_cabin}℃`],
-              ['실외 온도', `${vehicle.temperature_ambient}℃`],
-              ['배터리 전압', `${vehicle.battery_voltage}V`],
-              // [
-              //   '타이어 압력',
-              //   `FL ${vehicle.tpms.FL} / FR ${vehicle.tpms.FR} \n
-              //    RL ${vehicle.tpms.RL} / RR ${vehicle.tpms.RR}kPa`,
-              // ],
-              ['연료 잔량', `${vehicle.fuel_level}%`],
-            ].map(([k, v]) => (
-              <div
-                key={k}
-                className='rounded-xl border p-3 border-h-sand bg-h-white'
-              >
-                <div className='text-sm text-h-grey'>{k}</div>
-                <div className='font-semibold'>{v}</div>
+          <section className='mt-4 space-y-2'>
+            {/* 위치 / 시동 */}
+            <div className='flex gap-2'>
+              <div className='rounded-xl border p-3 border-h-sand bg-h-white flex-1'>
+                <div className='mb-2 text-sm text-h-grey'>위치</div>
+                <div className='font-semibold text-slate-900'>
+                  서울특별시 금천구 가산동
+                </div>
               </div>
-            ))}
+              <div className='rounded-xl border p-3 border-h-sand bg-h-white min-w-25'>
+                <div className='mb-2 text-sm text-h-grey text-center'>시동</div>
+                <div className='font-semibold text-slate-900 text-center'>
+                  {vehicle.ignitionOn ? 'ON' : 'OFF'}
+                </div>
+              </div>
+            </div>
+            {/* 기어 위치 / 단수 */}
+            <div className='flex gap-2'>
+              <div className='rounded-xl border p-3 border-h-sand bg-h-white flex-1'>
+                <div className='mb-2 text-sm text-h-grey'>기어 위치</div>
+                <div className='font-semibold text-slate-900'>
+                  {renderGearIndicator(vehicle.gear_position_mode)}
+                </div>
+              </div>
+              <div className='rounded-xl border p-3 border-h-sand bg-h-white min-w-25'>
+                <div className='mb-2 text-sm text-h-grey text-center'>
+                  기어 단수
+                </div>
+                <div className='font-semibold text-slate-900 text-center'>
+                  {vehicle.gear_position_current_gear}
+                </div>
+              </div>
+            </div>
+            {/* RPM / 스로틀 / 배터리 전압 */}
+            <div className='flex justify-between gap-2'>
+              {[
+                { label: 'RPM', value: `${vehicle.engine_rpm}` },
+                {
+                  label: '스로틀',
+                  value: `${vehicle.throttle_position}%`,
+                },
+                {
+                  label: '배터리 전압',
+                  value: `${vehicle.battery_voltage} V`,
+                },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className='rounded-xl border p-3 border-h-sand bg-h-white flex-1'
+                >
+                  <div className='mb-2 text-sm text-h-grey text-center'>
+                    {label}
+                  </div>
+                  <div className='font-semibold text-slate-900 text-center'>
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 엔진/냉각수 온도 */}
+            <div className='flex justify-between gap-2'>
+              {[
+                { label: '엔진 온도', value: `${vehicle.engine_temp}℃` },
+                { label: '냉각수 온도', value: `${vehicle.coolant_temp}℃` },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className='rounded-xl border p-3 border-h-sand bg-h-white flex-1'
+                >
+                  <div className='mb-2 text-sm text-h-grey'>{label}</div>
+                  <div className='font-semibold text-slate-900'>{value}</div>
+                </div>
+              ))}
+            </div>
+            {/* 실내외 온도 */}
+            <div className='flex justify-between gap-2'>
+              {[
+                { label: '실내 온도', value: `${vehicle.temperature_cabin}℃` },
+                {
+                  label: '실외 온도',
+                  value: `${vehicle.temperature_ambient}℃`,
+                },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className='rounded-xl border p-3 border-h-sand bg-h-white flex-1'
+                >
+                  <div className='mb-2 text-sm text-h-grey'>{label}</div>
+                  <div className='font-semibold text-slate-900'>{value}</div>
+                </div>
+              ))}
+            </div>
           </section>
         </>
       )}
@@ -355,3 +388,29 @@ function App() {
 }
 
 export default App;
+
+const renderGearIndicator = (gear: string) => {
+  const gearOrder = ['P', 'R', 'N', 'D'] as const;
+  const normalized = (gear || 'P').trim().toUpperCase();
+
+  return (
+    <div className='flex items-center gap-2'>
+      {gearOrder.map(mode => {
+        const isActive =
+          normalized === mode || normalized.startsWith(mode.toUpperCase());
+        return (
+          <span
+            key={mode}
+            className={`min-w-[32px] rounded-md border px-2 py-1 text-center text-sm font-semibold ${
+              isActive
+                ? 'border-h-blue bg-h-blue text-white'
+                : 'border-slate-200 bg-slate-100 text-slate-400'
+            }`}
+          >
+            {mode}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
