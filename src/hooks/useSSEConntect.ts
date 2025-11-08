@@ -1,49 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { getAlertLabel } from '../constants/alerts';
-
-interface PeriodicData {
-  vehicle_id: string;
-  location_latitude: number;
-  location_longitude: number;
-  location_altitude: number;
-  temperature_cabin: number;
-  temperature_ambient: number;
-  battery_voltage: number;
-  tpms_front_left: number;
-  tpms_front_right: number;
-  tpms_rear_left: number;
-  tpms_rear_right: number;
-  fuel_level: number;
-}
-
-interface RealtimeData {
-  vehicle_id: string;
-  vehicle_speed: number;
-  engine_rpm: number;
-  engine_status_ignition: string;
-  throttle_position: number;
-  gear_position_mode: string;
-  gear_position_current_gear: number;
-  engine_temp: number;
-  coolant_temp: number;
-  ev_battery_voltage: number;
-  ev_battery_current: number;
-  ev_battery_soc: number;
-}
-
-interface RawAlertData {
-  vehicleId: string;
-  timestamp: string;
-  alertType: string;
-  message: string;
-}
-
-export interface AlertData {
-  vehicle_id: string;
-  timestamp: string;
-  alertType: string;
-  message: string;
-}
+import type {
+  AlertData,
+  PeriodicData,
+  RealtimeData,
+} from '../types/VehicleData';
 
 interface SSEState {
   periodicData: PeriodicData | null;
@@ -68,23 +29,28 @@ interface ConnectionIssue {
   message: string;
 }
 
-const REALTIME_EXPECTED_INTERVAL_MS = 1000;
-const REALTIME_GRACE_MS = 500;
-const REALTIME_DEGRADE_MS = REALTIME_EXPECTED_INTERVAL_MS + REALTIME_GRACE_MS;
-const PERIODIC_EXPECTED_INTERVAL_MS = 10000;
-const PERIODIC_GRACE_MS = 2000;
-const PERIODIC_DEGRADE_MS = PERIODIC_EXPECTED_INTERVAL_MS + PERIODIC_GRACE_MS;
-const DEGRADE_RECONNECT_DELAY_MS = 5000;
-const MAX_STALE_RECONNECT_ATTEMPTS = 5;
-const SERVER_RETRY_DELAY_MS = 500;
+const REALTIME_EXPECTED_INTERVAL_MS = 1000; // 실시간 데이터 수신 주기 (1초)
+const PERIODIC_EXPECTED_INTERVAL_MS = 10000; // 주기적 데이터 수신 주기 (10초)
+const GRACE_MS = 2000; // 허용 지연 시간
+const REALTIME_DEGRADE_MS = REALTIME_EXPECTED_INTERVAL_MS + GRACE_MS; // 실시간 데이터 지연 감지 기준
+const PERIODIC_DEGRADE_MS = PERIODIC_EXPECTED_INTERVAL_MS + GRACE_MS; // 주기적 데이터 지연 감지 기준
+
+const DEGRADE_RECONNECT_DELAY_MS = 5000; // 지연 상태에서 재연결 시도 대기 시간
+const MAX_STALE_RECONNECT_ATTEMPTS = 3; // 최대 지연 재연결 시도 횟수
+const SERVER_RETRY_DELAY_MS = 500; // 서버 오류 재연결 대기 시간
 const DATA_RETRY_DELAY_MS = 200;
-const STALE_NOTICE_MESSAGE = '실시간 데이터 수신이 지연되고 있습니다.';
-const STALE_RETRY_MESSAGE = (attempt: number) =>
-  `실시간 데이터 지연으로 연결을 재시도합니다. (시도 ${attempt}/${MAX_STALE_RECONNECT_ATTEMPTS})`;
-const STALE_ERROR_MESSAGE =
-  '실시간 데이터가 복구되지 않아 연결을 종료했습니다. 잠시 후 다시 시도해 주세요.';
-const OFFLINE_ERROR_MESSAGE =
-  '네트워크 연결이 끊겼습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+const CONNECTION_MESSAGES = {
+  offline:
+    '네트워크 연결이 끊겼습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.',
+  server: '서버 응답이 없어 연결을 재시도합니다.',
+  stale: {
+    notice: '실시간 데이터 수신이 지연되고 있습니다.',
+    retry: (attempt: number) =>
+      `실시간 데이터 지연으로 연결을 재시도합니다.  (${attempt}/${MAX_STALE_RECONNECT_ATTEMPTS})`,
+    terminal:
+      '실시간 데이터가 복구되지 않아 연결을 종료했습니다. 잠시 후 다시 시도해 주세요.',
+  },
+} as const;
 
 const apiURL = import.meta.env.VITE_API_SERVER_URL;
 const useSSEConnect = (vehicleId: string) => {
@@ -114,6 +80,8 @@ const useSSEConnect = (vehicleId: string) => {
     setState(createInitialState());
 
     const url = `${apiURL}/api/sse/${vehicleId}`;
+
+    // SSR/테스트 환경에서는 navigator가 없을 수 있으므로, 안전하게 온라인 상태를 참조하기 위한 가드.
     const hasNavigator =
       typeof navigator !== 'undefined' &&
       navigator !== null &&
@@ -128,6 +96,7 @@ const useSSEConnect = (vehicleId: string) => {
       });
     };
 
+    // 주기적/실시간 데이터 감시 타이머 정리 함수
     const clearPeriodicWatchdogs = () => {
       if (periodicDegradeTimeoutRef.current !== null) {
         window.clearTimeout(periodicDegradeTimeoutRef.current);
@@ -186,7 +155,9 @@ const useSSEConnect = (vehicleId: string) => {
               ? state.issue
               : {
                   type: 'stale',
-                  message: STALE_RETRY_MESSAGE(reconnectAttemptRef.current),
+                  message: CONNECTION_MESSAGES.stale.retry(
+                    reconnectAttemptRef.current
+                  ),
                 },
           recoveryAttempts: reconnectAttemptRef.current,
         };
@@ -199,7 +170,7 @@ const useSSEConnect = (vehicleId: string) => {
       return {
         ...state,
         status: 'degraded',
-        issue: { type: 'stale', message: STALE_NOTICE_MESSAGE },
+        issue: { type: 'stale', message: CONNECTION_MESSAGES.stale.notice },
         recoveryAttempts: reconnectAttemptRef.current,
       };
     };
@@ -228,6 +199,7 @@ const useSSEConnect = (vehicleId: string) => {
       }
 
       if (hasNavigator && !navigator.onLine) {
+        // 브라우저가 오프라인이면 재연결을 시도해도 소용 없으므로 즉시 오프라인 처리
         handleClientOffline();
         return;
       }
@@ -239,7 +211,7 @@ const useSSEConnect = (vehicleId: string) => {
           realtimeData: null,
           alerts: prevState.alerts,
           status: 'error',
-          issue: { type: 'stale', message: STALE_ERROR_MESSAGE },
+          issue: { type: 'stale', message: CONNECTION_MESSAGES.stale.terminal },
           recoveryAttempts: reconnectAttemptRef.current,
           error: prevState.error,
         }));
@@ -261,7 +233,7 @@ const useSSEConnect = (vehicleId: string) => {
         status: 'reconnecting',
         issue: {
           type: 'stale',
-          message: STALE_RETRY_MESSAGE(reconnectAttemptRef.current),
+          message: CONNECTION_MESSAGES.stale.retry(reconnectAttemptRef.current),
         },
         recoveryAttempts: reconnectAttemptRef.current,
         error: prevState.error,
@@ -319,13 +291,13 @@ const useSSEConnect = (vehicleId: string) => {
       if (isOffline) {
         return {
           type: 'client-offline',
-          message: OFFLINE_ERROR_MESSAGE,
+          message: CONNECTION_MESSAGES.offline,
         };
       }
 
       return {
         type: 'server-error',
-        message: '서버 응답이 없어 연결을 재시도합니다.',
+        message: CONNECTION_MESSAGES.server,
       };
     };
 
@@ -359,7 +331,7 @@ const useSSEConnect = (vehicleId: string) => {
 
     const handleError = (event: Event) => {
       console.error('SSE 연결 에러:', event);
-      const isOffline = hasNavigator ? !navigator.onLine : false;
+      const isOffline = hasNavigator ? !navigator.onLine : false; // navigator가 있을 때만 온라인 상태로 판단
       if (isOffline) {
         handleClientOffline(event);
         return;
@@ -417,6 +389,7 @@ const useSSEConnect = (vehicleId: string) => {
       }));
 
       if (hasNavigator && !navigator.onLine) {
+        // 연결 시도 직전에 네트워크 상태를 확인해 불필요한 EventSource 생성 방지
         console.warn('오프라인 상태로 SSE 연결을 중단합니다.');
         handleClientOffline();
         return;
@@ -439,6 +412,7 @@ const useSSEConnect = (vehicleId: string) => {
       };
 
       eventSource.addEventListener('periodic_data', rawEvent => {
+        console.log('periodic_data 수신', rawEvent.data);
         try {
           const data = JSON.parse(
             (rawEvent as MessageEvent<string>).data
@@ -459,6 +433,7 @@ const useSSEConnect = (vehicleId: string) => {
       });
 
       eventSource.addEventListener('realtime_data', rawEvent => {
+        console.log('realtime_data 수신', rawEvent.data);
         try {
           const data = JSON.parse(
             (rawEvent as MessageEvent<string>).data
@@ -479,15 +454,14 @@ const useSSEConnect = (vehicleId: string) => {
       });
 
       eventSource.addEventListener('alert_data', rawEvent => {
+        console.log('alert_data 수신', rawEvent.data);
         try {
-          const raw = JSON.parse(
+          const parsed = JSON.parse(
             (rawEvent as MessageEvent<string>).data
-          ) as RawAlertData;
+          ) as AlertData;
           const data: AlertData = {
-            vehicle_id: raw.vehicleId,
-            timestamp: raw.timestamp,
-            alertType: getAlertLabel(raw.alertType),
-            message: raw.message,
+            ...parsed,
+            alertType: getAlertLabel(parsed.alertType),
           };
 
           const hadPeriodicStale = staleStateRef.current.periodic;
