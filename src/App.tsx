@@ -244,9 +244,7 @@ function App() {
               ? `SSE에 연결 중... (${connectedVehicleID})`
               : status === 'error'
                 ? '연결이 종료되었습니다. \n 잠시 후 다시 시도해 주세요.'
-                : issue
-                  ? issue.message
-                  : '데이터를 기다리는 중...'}
+                : '데이터를 기다리는 중...'}
           </p>
         </div>
       ) : (

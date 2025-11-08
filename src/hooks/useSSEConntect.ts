@@ -46,7 +46,7 @@ const CONNECTION_MESSAGES = {
   stale: {
     notice: '실시간 데이터 수신이 지연되고 있습니다.',
     retry: (attempt: number) =>
-      `실시간 데이터 지연으로 연결을 재시도합니다. (시도 ${attempt}/${MAX_STALE_RECONNECT_ATTEMPTS})`,
+      `실시간 데이터 지연으로 연결을 재시도합니다.  (${attempt}/${MAX_STALE_RECONNECT_ATTEMPTS})`,
     terminal:
       '실시간 데이터가 복구되지 않아 연결을 종료했습니다. 잠시 후 다시 시도해 주세요.',
   },
