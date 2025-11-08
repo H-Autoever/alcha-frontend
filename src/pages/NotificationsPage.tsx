@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useVehicle } from '@/contexts/VehicleContext.tsx';
 import { Notification } from '@/types/Notification';
-import { getAlertLabel } from '@/constants/alerts';
+import { getAlertLabel, getAlertSeverityLabel } from '@/constants/alerts';
 
 const apiURL = import.meta.env.VITE_API_SERVER_URL;
 
@@ -34,9 +34,7 @@ function NotificationsPage() {
           { signal: controller.signal }
         );
         if (!response.ok) {
-          throw new Error(
-            `Failed to fetch alert history (${response.status})`
-          );
+          throw new Error(`Failed to fetch alert history (${response.status})`);
         }
         const data = (await response.json()) as Notification[];
         if (!cancelled) {
@@ -109,6 +107,17 @@ function NotificationsPage() {
               >
                 <div className='flex justify-between items-center'>
                   <strong className='text-gray-900'>{n.alertType}</strong>
+                  <span
+                    className={`text-xs rounded-full px-2 py-0.5 ${
+                      n.alertLevel === 'DANGER'
+                        ? 'bg-red-100 text-red-800'
+                        : n.alertLevel === 'WARNING'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {getAlertSeverityLabel(n.alertLevel)}
+                  </span>
                 </div>
                 <div className='text-sm text-gray-700'>{n.message}</div>
                 <div className='text-xs text-h-grey'>
