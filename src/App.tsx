@@ -230,7 +230,7 @@ function App() {
       </header>
 
       {!vehicle ? (
-        <div className='flex min-h-[320px] flex-col items-center justify-center gap-4 text-center text-gray-500 whitespace-pre-line'>
+        <div className='flex min-h-[60vh] w-full flex-col items-center justify-center gap-4 text-center text-gray-500 whitespace-pre-line'>
           {status === 'error' ? (
             <AlertTriangle className='h-10 w-10 text-amber-500' aria-hidden />
           ) : (
