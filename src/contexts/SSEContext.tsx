@@ -8,9 +8,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import useSSEConnect, {
-  AlertData,
-} from '@/hooks/useSSEConntect.ts';
+import useSSEConnect from '@/hooks/useSSEConntect.ts';
+import type { AlertData } from '@/types/VehicleData.ts';
 import { useVehicle } from './VehicleContext.tsx';
 
 type SSEContextValue = {
@@ -76,11 +75,7 @@ export function SSEProvider({ children }: PropsWithChildren) {
 
   const value = useMemo(() => state, [state]);
 
-  return (
-    <SSEContext.Provider value={value}>
-      {children}
-    </SSEContext.Provider>
-  );
+  return <SSEContext.Provider value={value}>{children}</SSEContext.Provider>;
 }
 
 export function useSSE() {
