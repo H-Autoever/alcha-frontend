@@ -302,10 +302,7 @@ function App() {
           </section>
           <section className='mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2'>
             {[
-              [
-                '위치',
-                `${vehicle.location_latitude}, ${vehicle.location_longitude}`,
-              ],
+              ['위치', `서울특별시 금천구 가산동`],
               [
                 'RPM',
                 vehicle.state === 'driving' ? `${vehicle.engine_rpm} RPM` : '0',
